@@ -23,9 +23,9 @@ func TestClient(t *testing.T) {
 
 	url := client.URL()
 	require.Equal(t, "http://localhost:9091/when", url)
-	require.NoError(t, client.Given(*testCall1()))
-	require.NoError(t, client.Given(*testCall2()))
-	require.NoError(t, client.Given(*testCall3()))
+	require.NoError(t, client.Given(*call1))
+	require.NoError(t, client.Given(*call2))
+	require.NoError(t, client.Given(*call3))
 
 	req, err := http.NewRequest(http.MethodGet, url+"/test/assured", bytes.NewReader([]byte(`{"calling":"you"}`)))
 	require.NoError(t, err)
@@ -124,7 +124,7 @@ func TestClientTLS(t *testing.T) {
 
 	url := client.URL()
 	require.Equal(t, "https://localhost:9092/when", url)
-	require.NoError(t, client.Given(*testCall1()))
+	require.NoError(t, client.Given(*call1))
 
 	req, err := http.NewRequest(http.MethodGet, url+"/test/assured", bytes.NewReader([]byte(`{"calling":"you"}`)))
 	require.NoError(t, err)
@@ -222,19 +222,19 @@ func TestClientClose(t *testing.T) {
 
 	require.NotEqual(t, client.URL(), client2.URL())
 
-	require.NoError(t, client.Given(*testCall1()))
-	require.NoError(t, client2.Given(*testCall1()))
+	require.NoError(t, client.Given(*call1))
+	require.NoError(t, client2.Given(*call1))
 
 	client.Close()
 	time.Sleep(time.Second)
-	err := client.Given(*testCall1())
+	err := client.Given(*call1)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), `connection refused`)
 
 	client2.Close()
 	time.Sleep(time.Second)
-	err = client2.Given(*testCall1())
+	err = client2.Given(*call1)
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), `connection refused`)

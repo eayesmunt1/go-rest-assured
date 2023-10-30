@@ -15,7 +15,7 @@ import (
 // AssuredEndpoints
 type AssuredEndpoints struct {
 	httpClient     *http.Client
-	assuredCalls   *CallStore
+	assuredCalls   *ExpectedCallStore
 	madeCalls      *CallStore
 	callbackCalls  *CallStore
 	trackMadeCalls bool
@@ -24,11 +24,23 @@ type AssuredEndpoints struct {
 // NewAssuredEndpoints creates a new instance of assured endpoints
 func NewAssuredEndpoints(options Options) *AssuredEndpoints {
 	return &AssuredEndpoints{
-		assuredCalls:   NewCallStore(),
+		assuredCalls:   NewExpectedCallStore(),
 		madeCalls:      NewCallStore(),
 		callbackCalls:  NewCallStore(),
 		httpClient:     options.httpClient,
 		trackMadeCalls: options.trackMadeCalls,
+	}
+}
+
+// WrappedEndpoint is used to validate that the incoming request is an assured call
+func (a *AssuredEndpoints) WrappedECEndpoint(handler func(context.Context, *ExpectedCall) (interface{}, error)) endpoint.Endpoint {
+	return func(ctx context.Context, i interface{}) (response interface{}, err error) {
+		a, ok := i.(*ExpectedCall)
+		if !ok {
+			return nil, errors.New("unable to convert request to assured Call")
+		}
+
+		return handler(ctx, a)
 	}
 }
 
@@ -45,7 +57,7 @@ func (a *AssuredEndpoints) WrappedEndpoint(handler func(context.Context, *Call) 
 }
 
 // GivenEndpoint is used to stub out a call for a given path
-func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, call *Call) (interface{}, error) {
+func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, call *ExpectedCall) (interface{}, error) {
 	a.assuredCalls.Add(call)
 	slog.With("path", call.ID()).Info("assured call set")
 

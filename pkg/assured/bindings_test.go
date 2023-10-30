@@ -349,7 +349,7 @@ func TestEncodeAssuredCalls(t *testing.T) {
 	resp := httptest.NewRecorder()
 	expected, err := os.ReadFile("testdata/calls.json")
 	require.NoError(t, err)
-	err = encodeAssuredCall(context.TODO(), resp, []*Call{testCall1(), testCall2(), testCall3()})
+	err = encodeAssuredCall(context.TODO(), resp, []*ExpectedCall{testCall1(), testCall2(), testCall3()})
 
 	require.NoError(t, err)
 	require.Equal(t, "application/json", resp.Result().Header.Get("Content-Type"))
@@ -368,16 +368,16 @@ var (
 		http.MethodConnect,
 		http.MethodOptions,
 	}
-	fullAssuredCalls = &CallStore{
-		data: map[string][]*Call{
+	fullAssuredCalls = &ExpectedCallStore{
+		data: map[string][]*ExpectedCall{
 			"GET:test/assured":    {testCall1(), testCall2()},
 			"POST:teapot/assured": {testCall3()},
 		},
 	}
 )
 
-func testCall1() *Call {
-	return &Call{
+func testCall1() *ExpectedCall {
+	return &ExpectedCall{
 		Path:       "test/assured",
 		Method:     "GET",
 		StatusCode: http.StatusOK,
@@ -387,8 +387,8 @@ func testCall1() *Call {
 	}
 }
 
-func testCall2() *Call {
-	return &Call{
+func testCall2() *ExpectedCall {
+	return &ExpectedCall{
 		Path:       "test/assured",
 		Method:     "GET",
 		StatusCode: http.StatusConflict,
@@ -397,8 +397,8 @@ func testCall2() *Call {
 	}
 }
 
-func testCall3() *Call {
-	return &Call{
+func testCall3() *ExpectedCall {
+	return &ExpectedCall{
 		Path:       "teapot/assured",
 		Method:     "POST",
 		StatusCode: http.StatusTeapot,

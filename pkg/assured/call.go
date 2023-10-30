@@ -15,9 +15,22 @@ type Call struct {
 	StatusCode int               `json:"status_code"`
 	Delay      int               `json:"delay"`
 	Headers    map[string]string `json:"headers"`
+	Body       string            `json:"bodies,omitempty"`
 	Query      map[string]string `json:"query,omitempty"`
 	Response   CallResponse      `json:"response,omitempty"`
 	Callbacks  []Callback        `json:"callbacks,omitempty"`
+}
+
+type ExpectedCall struct {
+	Path          string            `json:"path"`
+	Method        string            `json:"method"`
+	StatusCode    int               `json:"status_code"`
+	Delay         int               `json:"delay"`
+	Headers       map[string]string `json:"headers"`
+	OrderedBodies []string          `json:"bodies,omitempty"`
+	Query         map[string]string `json:"query,omitempty"`
+	Response      CallResponse      `json:"response,omitempty"`
+	Callbacks     []Callback        `json:"callbacks,omitempty"`
 }
 
 // ID is used as a key when managing stubbed and made calls
@@ -28,6 +41,19 @@ func (c Call) ID() string {
 // String converts a Call's Response into a string
 func (c Call) String() string {
 	rawString := string(c.Response)
+
+	// TODO: implement string replacements for special cases
+	return rawString
+}
+
+// ID is used as a key when managing stubbed and made calls
+func (ec ExpectedCall) ID() string {
+	return fmt.Sprintf("%s:%s", ec.Method, ec.Path)
+}
+
+// String converts a Call's Response into a string
+func (ec ExpectedCall) String() string {
+	rawString := string(ec.Response)
 
 	// TODO: implement string replacements for special cases
 	return rawString
@@ -56,7 +82,7 @@ func (response *CallResponse) UnmarshalJSON(data []byte) error {
 				return nil
 			}
 		}
-		// The data is stringified JSON, therefore we eill use the unquoted JSON
+		// The data is stringified JSON, therefore we will use the unquoted JSON
 		*response = []byte(s)
 		return nil
 	}

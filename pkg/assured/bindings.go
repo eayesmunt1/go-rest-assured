@@ -40,7 +40,7 @@ func (c *Client) createApplicationRouter() *mux.Router {
 	router.Handle(
 		"/given/{path:.*}",
 		kithttp.NewServer(
-			e.WrappedEndpoint(e.GivenEndpoint),
+			e.WrappedECEndpoint(e.GivenEndpoint),
 			decodeAssuredCall,
 			encodeAssuredCall,
 			kithttp.ServerAfter(kithttp.SetResponseHeader("Access-Control-Allow-Origin", "*"))),

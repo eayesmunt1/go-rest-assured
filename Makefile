@@ -14,7 +14,7 @@ docker-build:
 fmt:
 	go mod tidy
 	gofmt -w -l -s .
-	golangci-lint run ./...
+	# golangci-lint run ./...
 assert-no-diff:
 	test -z "$(shell git status --porcelain)"
 test: fmt

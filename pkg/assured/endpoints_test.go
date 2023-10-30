@@ -6,14 +6,35 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 )
 
+var call1 = (*Call)(unsafe.Pointer(testCall1()))
+var call2 = (*Call)(unsafe.Pointer(testCall2()))
+var call3 = (*Call)(unsafe.Pointer(testCall3()))
+
+func convertExpectedCallsToCalls(expectedCallStore *ExpectedCallStore) *CallStore {
+	callsMade := make(map[string][]*Call, len(fullAssuredCalls.data))
+	for key, expectedCalls := range fullAssuredCalls.data {
+		calls := make([]*Call, len(expectedCalls))
+		for _, call := range expectedCalls {
+			calls = append(calls, (*Call)(unsafe.Pointer(&call)))
+		}
+		callsMade[key] = calls
+	}
+
+	callStore := NewCallStore()
+	callStore.data = callsMade
+
+	return callStore
+}
+
 func TestNewAssuredEndpoints(t *testing.T) {
 	expected := &AssuredEndpoints{
 		httpClient:     http.DefaultClient,
-		assuredCalls:   NewCallStore(),
+		assuredCalls:   NewExpectedCallStore(),
 		madeCalls:      NewCallStore(),
 		trackMadeCalls: true,
 	}
@@ -97,8 +118,8 @@ func TestGivenCallbackEndpointSuccess(t *testing.T) {
 
 	c, err = endpoints.GivenCallbackEndpoint(context.TODO(), testCallback())
 
-	expectedAssured := &CallStore{
-		data: map[string][]*Call{
+	expectedAssured := &ExpectedCallStore{
+		data: map[string][]*ExpectedCall{
 			"GET:test/assured":    {callback1, callback2},
 			"POST:teapot/assured": {callback3},
 		},
@@ -122,24 +143,24 @@ func TestWhenEndpointSuccess(t *testing.T) {
 		callbackCalls:  NewCallStore(),
 		trackMadeCalls: true,
 	}
-	expected := map[string][]*Call{
+	expected := map[string][]*ExpectedCall{
 		"GET:test/assured":    {testCall2(), testCall1()},
 		"POST:teapot/assured": {testCall3()},
 	}
 
-	c, err := endpoints.WhenEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.WhenEndpoint(context.TODO(), call1)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall1(), c)
 	require.Equal(t, expected, endpoints.assuredCalls.data)
 
-	c, err = endpoints.WhenEndpoint(context.TODO(), testCall2())
+	c, err = endpoints.WhenEndpoint(context.TODO(), call2)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall2(), c)
 	require.Equal(t, fullAssuredCalls, endpoints.assuredCalls)
 
-	c, err = endpoints.WhenEndpoint(context.TODO(), testCall3())
+	c, err = endpoints.WhenEndpoint(context.TODO(), call3)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall3(), c)
@@ -154,24 +175,24 @@ func TestWhenEndpointSuccessTrackingDisabled(t *testing.T) {
 		callbackCalls:  NewCallStore(),
 		trackMadeCalls: false,
 	}
-	expected := map[string][]*Call{
+	expected := map[string][]*ExpectedCall{
 		"GET:test/assured":    {testCall2(), testCall1()},
 		"POST:teapot/assured": {testCall3()},
 	}
 
-	c, err := endpoints.WhenEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.WhenEndpoint(context.TODO(), call1)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall1(), c)
 	require.Equal(t, expected, endpoints.assuredCalls.data)
 
-	c, err = endpoints.WhenEndpoint(context.TODO(), testCall2())
+	c, err = endpoints.WhenEndpoint(context.TODO(), call2)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall2(), c)
 	require.Equal(t, fullAssuredCalls, endpoints.assuredCalls)
 
-	c, err = endpoints.WhenEndpoint(context.TODO(), testCall3())
+	c, err = endpoints.WhenEndpoint(context.TODO(), call3)
 
 	require.NoError(t, err)
 	require.Equal(t, testCall3(), c)
@@ -190,8 +211,8 @@ func TestWhenEndpointSuccessCallbacks(t *testing.T) {
 	call.Headers[AssuredCallbackTarget] = testServer.URL
 	endpoints := &AssuredEndpoints{
 		httpClient: http.DefaultClient,
-		assuredCalls: &CallStore{
-			data: map[string][]*Call{"GET:test/assured": {assured}},
+		assuredCalls: &ExpectedCallStore{
+			data: map[string][]*ExpectedCall{"GET:test/assured": {assured}},
 		},
 		madeCalls: NewCallStore(),
 		callbackCalls: &CallStore{
@@ -200,7 +221,7 @@ func TestWhenEndpointSuccessCallbacks(t *testing.T) {
 		trackMadeCalls: true,
 	}
 
-	c, err := endpoints.WhenEndpoint(context.TODO(), assured)
+	c, err := endpoints.WhenEndpoint(context.TODO(), (*Call)(unsafe.Pointer(assured)))
 
 	require.NoError(t, err)
 	require.Equal(t, assured, c)
@@ -222,8 +243,8 @@ func TestWhenEndpointSuccessDelayed(t *testing.T) {
 	call.Headers[AssuredCallbackDelay] = "4"
 	endpoints := &AssuredEndpoints{
 		httpClient: http.DefaultClient,
-		assuredCalls: &CallStore{
-			data: map[string][]*Call{"GET:test/assured": {assured}},
+		assuredCalls: &ExpectedCallStore{
+			data: map[string][]*ExpectedCall{"GET:test/assured": {assured}},
 		},
 		madeCalls: NewCallStore(),
 		callbackCalls: &CallStore{
@@ -232,7 +253,7 @@ func TestWhenEndpointSuccessDelayed(t *testing.T) {
 		trackMadeCalls: true,
 	}
 	start := time.Now()
-	c, err := endpoints.WhenEndpoint(context.TODO(), assured)
+	c, err := endpoints.WhenEndpoint(context.TODO(), (*Call)(unsafe.Pointer(assured)))
 
 	require.True(t, time.Since(start) >= 2*time.Second, "response should be delayed 2 seconds")
 	require.NoError(t, err)
@@ -267,7 +288,7 @@ func TestSendCallbackBadResponse(t *testing.T) {
 func TestWhenEndpointNotFound(t *testing.T) {
 	endpoints := NewAssuredEndpoints(DefaultOptions)
 
-	c, err := endpoints.WhenEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.WhenEndpoint(context.TODO(), call1)
 
 	require.Nil(t, c)
 	require.Error(t, err)
@@ -275,29 +296,33 @@ func TestWhenEndpointNotFound(t *testing.T) {
 }
 
 func TestVerifyEndpointSuccess(t *testing.T) {
+	callStore := convertExpectedCallsToCalls(fullAssuredCalls)
+
 	endpoints := &AssuredEndpoints{
-		madeCalls:      fullAssuredCalls,
+		madeCalls:      callStore,
 		trackMadeCalls: true,
 	}
 
-	c, err := endpoints.VerifyEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.VerifyEndpoint(context.TODO(), call1)
 
 	require.NoError(t, err)
-	require.Equal(t, []*Call{testCall1(), testCall2()}, c)
+	require.Equal(t, []*Call{call1, call2}, c)
 
-	c, err = endpoints.VerifyEndpoint(context.TODO(), testCall3())
+	c, err = endpoints.VerifyEndpoint(context.TODO(), call3)
 
 	require.NoError(t, err)
-	require.Equal(t, []*Call{testCall3()}, c)
+	require.Equal(t, []*Call{call3}, c)
 }
 
 func TestVerifyEndpointTrackingDisabled(t *testing.T) {
+	callStore := convertExpectedCallsToCalls(fullAssuredCalls)
+
 	endpoints := &AssuredEndpoints{
-		madeCalls:      fullAssuredCalls,
+		madeCalls:      callStore,
 		trackMadeCalls: false,
 	}
 
-	c, err := endpoints.VerifyEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.VerifyEndpoint(context.TODO(), call1)
 
 	require.Nil(t, c)
 	require.Error(t, err)
@@ -305,31 +330,33 @@ func TestVerifyEndpointTrackingDisabled(t *testing.T) {
 }
 
 func TestClearEndpointSuccess(t *testing.T) {
+	callStore := convertExpectedCallsToCalls(fullAssuredCalls)
+
 	endpoints := &AssuredEndpoints{
 		assuredCalls:   fullAssuredCalls,
-		madeCalls:      fullAssuredCalls,
+		madeCalls:      callStore,
 		callbackCalls:  NewCallStore(),
 		trackMadeCalls: true,
 	}
 	expected := map[string][]*Call{
-		"POST:teapot/assured": {testCall3()},
+		"POST:teapot/assured": {call3},
 	}
 
-	c, err := endpoints.ClearEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.ClearEndpoint(context.TODO(), call1)
 
 	require.NoError(t, err)
 	require.Nil(t, c)
 	require.Equal(t, expected, endpoints.assuredCalls.data)
 	require.Equal(t, expected, endpoints.madeCalls.data)
 
-	c, err = endpoints.ClearEndpoint(context.TODO(), testCall2())
+	c, err = endpoints.ClearEndpoint(context.TODO(), call2)
 
 	require.NoError(t, err)
 	require.Nil(t, c)
 	require.Equal(t, expected, endpoints.assuredCalls.data)
 	require.Equal(t, expected, endpoints.madeCalls.data)
 
-	c, err = endpoints.ClearEndpoint(context.TODO(), testCall3())
+	c, err = endpoints.ClearEndpoint(context.TODO(), call3)
 
 	require.NoError(t, err)
 	require.Nil(t, c)
@@ -360,10 +387,12 @@ func TestClearEndpointSuccessCallback(t *testing.T) {
 }
 
 func TestClearAllEndpointSuccess(t *testing.T) {
+	callStore := convertExpectedCallsToCalls(fullAssuredCalls)
+
 	endpoints := &AssuredEndpoints{
 		assuredCalls:   fullAssuredCalls,
-		madeCalls:      fullAssuredCalls,
-		callbackCalls:  fullAssuredCalls,
+		madeCalls:      callStore,
+		callbackCalls:  callStore,
 		trackMadeCalls: true,
 	}
 
