@@ -34,6 +34,7 @@ func NewAssuredEndpoints(options Options) *AssuredEndpoints {
 
 // WrappedEndpoint is used to validate that the incoming request is an assured call
 func (a *AssuredEndpoints) WrappedExpectedCallEndpoint(handler func(context.Context, *ExpectedCall) (interface{}, error)) endpoint.Endpoint {
+	println("EYEYEYEYEYEYEYEYEY")
 	return func(ctx context.Context, i interface{}) (response interface{}, err error) {
 		a, ok := i.(*ExpectedCall)
 		if !ok {
