@@ -33,6 +33,18 @@ func NewAssuredEndpoints(options Options) *AssuredEndpoints {
 }
 
 // WrappedEndpoint is used to validate that the incoming request is an assured call
+func (a *AssuredEndpoints) WrappedExpectedCallEndpoint(handler func(context.Context, *ExpectedCall) (interface{}, error)) endpoint.Endpoint {
+	return func(ctx context.Context, i interface{}) (response interface{}, err error) {
+		a, ok := i.(*ExpectedCall)
+		if !ok {
+			return nil, errors.New("unable to convert request to assured Call")
+		}
+
+		return handler(ctx, a)
+	}
+}
+
+// WrappedEndpoint is used to validate that the incoming request is an assured call
 func (a *AssuredEndpoints) WrappedEndpoint(handler func(context.Context, *Call) (interface{}, error)) endpoint.Endpoint {
 	return func(ctx context.Context, i interface{}) (response interface{}, err error) {
 		a, ok := i.(*Call)
@@ -45,11 +57,28 @@ func (a *AssuredEndpoints) WrappedEndpoint(handler func(context.Context, *Call) 
 }
 
 // GivenEndpoint is used to stub out a call for a given path
-func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, call *Call) (interface{}, error) {
-	a.assuredCalls.Add(call)
-	slog.With("path", call.ID()).Info("assured call set")
+func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, expectedCall *ExpectedCall) (interface{}, error) {
+	if expectedCall.OrderedBodies != nil {
+		for _, body := range *expectedCall.OrderedBodies {
+			a.assuredCalls.Add(&Call{
+				Path:       expectedCall.Path,
+				Method:     expectedCall.Method,
+				StatusCode: expectedCall.StatusCode,
+				Delay:      expectedCall.Delay,
+				Headers:    expectedCall.Headers,
+				Body:       body,
+				Query:      expectedCall.Query,
+				Response:   expectedCall.Response,
+				Callbacks:  expectedCall.Callbacks,
+			})
+		}
+	} else {
+		call, _ := convertExpectedCallToCall(expectedCall, nil)
+		a.assuredCalls.Add(call)
+		slog.With("path", call.ID()).Info("assured call set")
+	}
 
-	return call, nil
+	return expectedCall, nil
 }
 
 // GivenCallbackEndpoint is used to stub out callbacks for a callback key

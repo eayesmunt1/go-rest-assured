@@ -376,6 +376,36 @@ var (
 	}
 )
 
+func testExpectedCall1() *ExpectedCall {
+	return &ExpectedCall{
+		Path:       "test/assured",
+		Method:     "GET",
+		StatusCode: http.StatusOK,
+		Response:   []byte(`{"assured": true}`),
+		Headers:    map[string]string{"Content-Length": "17", "User-Agent": "Go-http-client/1.1", "Accept-Encoding": "gzip"},
+		Query:      map[string]string{"assured": "max"},
+	}
+}
+
+func testExpectedCall2() *ExpectedCall {
+	return &ExpectedCall{
+		Path:       "test/assured",
+		Method:     "GET",
+		StatusCode: http.StatusConflict,
+		Response:   []byte("error"),
+		Headers:    map[string]string{"Content-Length": "5", "User-Agent": "Go-http-client/1.1", "Accept-Encoding": "gzip"},
+	}
+}
+
+func testExpectedCall3() *ExpectedCall {
+	return &ExpectedCall{
+		Path:       "teapot/assured",
+		Method:     "POST",
+		StatusCode: http.StatusTeapot,
+		Headers:    map[string]string{"Content-Length": "0", "User-Agent": "Go-http-client/1.1", "Accept-Encoding": "gzip"},
+	}
+}
+
 func testCall1() *Call {
 	return &Call{
 		Path:       "test/assured",

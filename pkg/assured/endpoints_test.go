@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 )
@@ -53,17 +54,17 @@ func TestWrappedEndpointFailure(t *testing.T) {
 func TestGivenEndpointSuccess(t *testing.T) {
 	endpoints := NewAssuredEndpoints(DefaultOptions)
 
-	c, err := endpoints.GivenEndpoint(context.TODO(), testCall1())
+	c, err := endpoints.GivenEndpoint(context.TODO(), testExpectedCall1())
 
 	require.NoError(t, err)
 	require.Equal(t, testCall1(), c)
 
-	c, err = endpoints.GivenEndpoint(context.TODO(), testCall2())
+	c, err = endpoints.GivenEndpoint(context.TODO(), testExpectedCall2())
 
 	require.NoError(t, err)
 	require.Equal(t, testCall2(), c)
 
-	c, err = endpoints.GivenEndpoint(context.TODO(), testCall3())
+	c, err = endpoints.GivenEndpoint(context.TODO(), testExpectedCall3())
 
 	require.NoError(t, err)
 	require.Equal(t, testCall3(), c)
@@ -74,33 +75,37 @@ func TestGivenEndpointSuccess(t *testing.T) {
 func TestGivenCallbackEndpointSuccess(t *testing.T) {
 	endpoints := NewAssuredEndpoints(DefaultOptions)
 
-	callback1 := testCall1()
-	callback1.Headers[AssuredCallbackKey] = "call-key"
-	c, err := endpoints.GivenEndpoint(context.TODO(), callback1)
+	expectedCallback1 := testExpectedCall1()
+	expectedCallback1.Headers[AssuredCallbackKey] = "call-key"
+	c, err := endpoints.GivenEndpoint(context.TODO(), expectedCallback1)
 
 	require.NoError(t, err)
-	require.Equal(t, callback1, c)
+	require.Equal(t, expectedCallback1, c)
 
-	callback2 := testCall2()
-	callback2.Headers[AssuredCallbackKey] = "call-key"
-	c, err = endpoints.GivenEndpoint(context.TODO(), callback2)
-
-	require.NoError(t, err)
-	require.Equal(t, callback2, c)
-
-	callback3 := testCall3()
-	callback3.Headers[AssuredCallbackKey] = "call-key"
-	c, err = endpoints.GivenEndpoint(context.TODO(), callback3)
+	expectedCallback2 := testExpectedCall2()
+	expectedCallback2.Headers[AssuredCallbackKey] = "call-key"
+	c, err = endpoints.GivenEndpoint(context.TODO(), expectedCallback2)
 
 	require.NoError(t, err)
-	require.Equal(t, callback3, c)
+	require.Equal(t, expectedCallback2, c)
+
+	expectedCallback3 := testExpectedCall3()
+	expectedCallback3.Headers[AssuredCallbackKey] = "call-key"
+	c, err = endpoints.GivenEndpoint(context.TODO(), expectedCallback3)
+
+	require.NoError(t, err)
+	require.Equal(t, expectedCallback3, c)
 
 	c, err = endpoints.GivenCallbackEndpoint(context.TODO(), testCallback())
 
+	callBack1 := (*Call)(unsafe.Pointer(expectedCallback1))
+	callBack2 := (*Call)(unsafe.Pointer(expectedCallback2))
+	callBack3 := (*Call)(unsafe.Pointer(expectedCallback3))
+
 	expectedAssured := &CallStore{
 		data: map[string][]*Call{
-			"GET:test/assured":    {callback1, callback2},
-			"POST:teapot/assured": {callback3},
+			"GET:test/assured":    {callBack1, callBack2},
+			"POST:teapot/assured": {callBack3},
 		},
 	}
 	expectedCallback := &CallStore{
