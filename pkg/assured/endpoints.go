@@ -32,15 +32,16 @@ func NewAssuredEndpoints(options Options) *AssuredEndpoints {
 	}
 }
 
-// WrappedEndpoint is used to validate that the incoming request is an assured call
-func (a *AssuredEndpoints) WrappedExpectedCallEndpoint(handler func(context.Context, *ExpectedCall) (interface{}, error)) endpoint.Endpoint {
-	println("EYEYEYEYEYEYEYEYEY")
+// WrappedEndpoint is used to validate that the incoming request is an assured expectedCall
+func (a *AssuredEndpoints) WrappedExpectedCallEndpoint(handler func(context.Context, *ExpectedCall) (*ExpectedCall, error)) endpoint.Endpoint {
 	return func(ctx context.Context, i interface{}) (response interface{}, err error) {
 		a, ok := i.(*ExpectedCall)
 		if !ok {
-			return nil, errors.New("unable to convert request to assured Call")
+			println("Houston we have a problem")
+			return nil, errors.New("unable to convert request to assured ExpectedCall")
 		}
 
+		println("MADE IT")
 		return handler(ctx, a)
 	}
 }
@@ -58,7 +59,7 @@ func (a *AssuredEndpoints) WrappedEndpoint(handler func(context.Context, *Call) 
 }
 
 // GivenEndpoint is used to stub out a call for a given path
-func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, expectedCall *ExpectedCall) (interface{}, error) {
+func (a *AssuredEndpoints) GivenEndpoint(ctx context.Context, expectedCall *ExpectedCall) (*ExpectedCall, error) {
 	if expectedCall.OrderedBodies != nil {
 		for _, body := range *expectedCall.OrderedBodies {
 			a.assuredCalls.Add(&Call{

@@ -96,7 +96,7 @@ func TestGivenCallbackEndpointSuccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedCallback3, c)
 
-	c, err = endpoints.GivenCallbackEndpoint(context.TODO(), testCallback())
+	ca, err := endpoints.GivenCallbackEndpoint(context.TODO(), testCallback())
 
 	callBack1 := (*Call)(unsafe.Pointer(expectedCallback1))
 	callBack2 := (*Call)(unsafe.Pointer(expectedCallback2))
@@ -114,7 +114,7 @@ func TestGivenCallbackEndpointSuccess(t *testing.T) {
 		},
 	}
 	require.NoError(t, err)
-	require.Equal(t, testCallback(), c)
+	require.Equal(t, testCallback(), ca)
 	require.Equal(t, expectedAssured, endpoints.assuredCalls)
 	require.Equal(t, expectedCallback, endpoints.callbackCalls)
 
